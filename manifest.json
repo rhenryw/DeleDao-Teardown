@@ -1,0 +1,85 @@
+{
+  "action": {
+    "default_icon": "icons/128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "all_frames": true,
+      "js": [
+        "core.min.js",
+        "fInit.js"
+      ],
+      "match_about_blank": true,
+      "matches": [
+        "*://*/*"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "description": "Deledao protects students and their privacy online in real time.",
+  "externally_connectable": {
+    "ids": [
+      "jbiooalnpjmfldodiaclikfcebmekfmh",
+      "hmfjajhcddnpmhkhakkgoibealjcffho",
+      "kbohafcopfpigkjdimdcdgenlhkmhbnc",
+      "aceopacgaepdcelohobicpffbbejnfac",
+      "ldkfhkblancdbelbpnfdkckhaflajpol",
+      "imbebkfnckdihojplffkhfhknigflmoi",
+      "pfhaghdhbmjefgkbaccokhefomdlbida",
+      "fdahmkggnacjakeniammhdmgmpdhkinm",
+      "eolnmeemihoomadihdofkdomnkocefbg"
+    ],
+    "matches": [
+      "https://*.deledao.com/*",
+      "https://*.dev.deledao.com/*"
+    ]
+  },
+  "host_permissions": [
+    "\u003Call_urls\u003E",
+    "*://*/*"
+  ],
+  "icons": {
+    "128": "icons/128.png",
+    "16": "icons/16.png",
+    "48": "icons/48.png"
+  },
+  "incognito": "spanning",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu6dQc8u0ZkW0JHzzMcP7MovOYHXTJAfFCJ0WVAtbxTHhgBFC+G/Jtuw2n88Dy6x/0A09I3MeVDF/TvliDkVfMCN8Q8J8qeN/AiyQ2xIeslIHBVP3LQvmKUSY2Mj3PI1LYzrv0vaoIFiNG6NsjqSGAvur6AwB5AWqq1i8iJJIiyymtVvXN+nED1ZEVttKBHvyee4qQ8h97q5i5W+o9OG0Sc9PV9JDpdEVUwlAuvdp20cwbOU0+U/ZgGFpyRyro+vejGx+C8PFNncCzgNwQDO8moSJwym0LydmCTab2AoNujsystUAHA5r7qife3Ei9fzAoGeCcdzZwBdcaVM9ktm9ewIDAQAB",
+  "manifest_version": 3,
+  "name": "Deledao Education",
+  "oauth2": {
+    "client_id": "775655569459-rf957jtgdl0u86dhla0klkn6mmn580d0.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.email"
+    ]
+  },
+  "permissions": [
+    "alarms",
+    "tabs",
+    "activeTab",
+    "cookies",
+    "storage",
+    "downloads",
+    "privacy",
+    "webRequest",
+    "webRequestBlocking",
+    "webNavigation",
+    "idle",
+    "browsingData",
+    "system.cpu",
+    "identity",
+    "identity.email",
+    "nativeMessaging",
+    "notifications",
+    "contextMenus",
+    "geolocation",
+    "enterprise.deviceAttributes",
+    "offscreen",
+    "scripting"
+  ],
+  "update_url": "https://cc.deledao.com/GetUpdates",
+  "version": "2026.3.6.2"
+}
