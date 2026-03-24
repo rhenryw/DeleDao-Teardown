@@ -1,8 +1,9 @@
 (function(){
     'use strict';
 
-    if (window.__ghost_active) return;
-    window.__ghost_active = true;
+    const GHOST_KEY = '_' + Math.random().toString(36).slice(2) + '_';
+    if (window[GHOST_KEY]) return;
+    window[GHOST_KEY] = true;
 
     const ORIGINAL = {
         addEventListener: EventTarget.prototype.addEventListener,
@@ -79,7 +80,6 @@
     ];
 
     const SENSITIVE_TAGS = ['VIDEO', 'CANVAS', 'IFRAME', 'EMBED', 'OBJECT', 'IMG', 'SOURCE'];
-    const ALWAYS_HIDE_TAGS = ['VIDEO', 'CANVAS', 'IFRAME', 'EMBED', 'OBJECT'];
     const PROTECTED = new WeakSet();
     const HOOKED = new WeakSet();
     const HIDDEN_ELEMENTS = new WeakMap();
@@ -88,7 +88,10 @@
 
     function isDldMessage(data) {
         if (typeof data === 'string') {
-            return DLD_MESSAGE_PATTERNS.some(p => data.includes(p));
+            return data.includes('__dld') || 
+                   data.includes('deledao') || 
+                   data.includes('nativecallid') ||
+                   data.includes('napaframeid');
         }
         
         if (!data || typeof data !== 'object') return false;
@@ -130,15 +133,22 @@
     }
 
     function shouldHide(el) {
-        if (ALWAYS_HIDE_TAGS.includes(el.tagName)) {
-            return true;
+        if (el.tagName === 'CANVAS') {
+            return !el.width && !el.height;
         }
-        
+
+        if (el.tagName === 'IFRAME') {
+            const src = el.src || '';
+            return src.includes('deledao.com') || src === '' || src === 'about:blank';
+        }
+
         if (el.tagName === 'IMG' || el.tagName === 'SOURCE') {
             const src = el.src || el.currentSrc || '';
             return !src || src.startsWith('blob:') || src.startsWith('data:');
         }
-        
+
+        if (['VIDEO', 'EMBED', 'OBJECT'].includes(el.tagName)) return true;
+
         return false;
     }
 
@@ -222,7 +232,7 @@
                         }
                     }
                     ORIGINAL.storageSetItem.call(store, 'whiteList', UNIVERSAL_WHITELIST);
-                    ORIGINAL.storageSetItem.call(store, '__dld_disabled', 'true');
+                    ORIGINAL.storageSetItem.call(store, GHOST_KEY + 'disabled', 'true');
                 });
             } catch (e) {}
         };
@@ -233,7 +243,7 @@
             try {
                 [localStorage, sessionStorage].forEach(function(store) {
                     ORIGINAL.storageSetItem.call(store, 'whiteList', UNIVERSAL_WHITELIST);
-                    ORIGINAL.storageSetItem.call(store, '__dld_disabled', 'true');
+                    ORIGINAL.storageSetItem.call(store, GHOST_KEY + 'disabled', 'true');
                 });
             } catch (e) {}
         }, 2000);
@@ -246,14 +256,14 @@
         }, { capture: true });
         
         Storage.prototype.setItem = function(key, value) {
-            if (shouldBlock(key)) {
-                return;
-            }
+            if (shouldBlock(key)) return;
             
             const k = String(key).toLowerCase();
+            
             if (k === 'whitelist') {
-                value = UNIVERSAL_WHITELIST;
+                return ORIGINAL.storageSetItem.call(this, 'whiteList', UNIVERSAL_WHITELIST);
             }
+            
             if (k.includes('dld') && (k.includes('disable') || k.includes('safe'))) {
                 value = 'true';
             }
@@ -262,24 +272,16 @@
         };
         
         Storage.prototype.removeItem = function(key) {
-            if (shouldProtect(key)) {
-                return;
-            }
+            if (shouldProtect(key)) return;
             return ORIGINAL.storageRemoveItem.call(this, key);
         };
         
         Storage.prototype.getItem = function(key) {
             const k = String(key).toLowerCase();
             
-            if (shouldBlock(key)) {
-                return null;
-            }
-            if (k === 'whitelist') {
-                return UNIVERSAL_WHITELIST;
-            }
-            if (k.includes('dld') && (k.includes('disable') || k.includes('safe'))) {
-                return 'true';
-            }
+            if (shouldBlock(key)) return null;
+            if (k === 'whitelist') return UNIVERSAL_WHITELIST;
+            if (k.includes('dld') && (k.includes('disable') || k.includes('safe'))) return 'true';
             
             return ORIGINAL.storageGetItem.call(this, key);
         };
@@ -289,7 +291,7 @@
         IDBFactory.prototype.open = function(name, version) {
             const n = String(name).toLowerCase();
             if (n.includes('dld') || n.includes('deledao')) {
-                return ORIGINAL.idbOpen.call(this, '__ghost_decoy_' + name, version);
+                return ORIGINAL.idbOpen.call(this, GHOST_KEY + name, 1);
             }
             return ORIGINAL.idbOpen.call(this, name, version);
         };
@@ -315,7 +317,7 @@
             el.style.setProperty('display', 'none', 'important');
             el.style.setProperty('visibility', 'hidden', 'important');
             el.style.setProperty('opacity', '0', 'important');
-            el.setAttribute('data-ghost-hidden', 'true');
+            el.setAttribute('data-g' + GHOST_KEY.slice(1,4), 'true');
             
             pendingRestores.push({
                 element: el,
@@ -338,7 +340,7 @@
                         el.style.visibility = s.visibility || '';
                         el.style.opacity = s.opacity || '';
                         el.style.position = s.position || '';
-                        el.removeAttribute('data-ghost-hidden');
+                        el.removeAttribute('data-g' + GHOST_KEY.slice(1,4));
                     } catch (e) {}
                     return false;
                 }
@@ -407,7 +409,7 @@
     }
 
     function createSandboxHelper() {
-        window.__ghost_sandbox = function(content, options) {
+        const sandboxFn = function(content, options) {
             options = options || {};
             
             const iframe = ORIGINAL.createElement.call(document, 'iframe');
@@ -441,7 +443,7 @@
             return iframe;
         };
         
-        window.__ghost_wrapGame = function(gameElement, options) {
+        const wrapGameFn = function(gameElement, options) {
             options = options || {};
             
             const container = ORIGINAL.createElement.call(document, 'div');
@@ -451,7 +453,7 @@
                 height: ${options.height || gameElement.offsetHeight || '100%'};
             `;
             
-            const sandbox = window.__ghost_sandbox(gameElement.outerHTML, {
+            const sandbox = sandboxFn(gameElement.outerHTML, {
                 style: 'width:100%;height:100%;border:none;',
                 css: options.css
             });
@@ -460,10 +462,34 @@
             
             return container;
         };
+        
+        ORIGINAL.defineProperty.call(Object, window, GHOST_KEY + 'api', {
+            value: {
+                sandbox: sandboxFn,
+                wrapGame: wrapGameFn
+            },
+            enumerable: false,
+            configurable: false,
+            writable: false
+        });
     }
 
     function spoofDocumentProperties() {
-        document.title = 'Interactive Learning Module - Educational Content';
+        let realTitle = document.title || '';
+        
+        try {
+            ORIGINAL.defineProperty.call(Object, document, 'title', {
+                get: function() {
+                    const stack = new Error().stack || '';
+                    if (stack.includes('deledao.com') || stack.includes('chrome-extension://')) {
+                        return 'Interactive Learning Module - Educational Content';
+                    }
+                    return realTitle;
+                },
+                set: function(val) { realTitle = val; },
+                configurable: true
+            });
+        } catch(e) {}
         
         try {
             ORIGINAL.defineProperty.call(Object, document, 'visibilityState', {
@@ -494,12 +520,5 @@
     }
 
     init();
-
-    window.__ghost = {
-        active: true,
-        version: '3.5.0',
-        sandbox: window.__ghost_sandbox,
-        wrapGame: window.__ghost_wrapGame
-    };
 
 })();
